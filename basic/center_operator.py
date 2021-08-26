@@ -1,15 +1,17 @@
 from collections import deque
 
+
 class CenterOperator():
     """simple call-center simulator"""
+
     def __init__(self):
         self.__unprocessed_calls: deque = deque()
         self.__operators: List = [
-                {'id': 'A', 'state': 'available', 'call': None},
-                {'id': 'B', 'state': 'available', 'call': None}]
+            {'id': 'A', 'state': 'available', 'call': None},
+            {'id': 'B', 'state': 'available', 'call': None}]
         return
 
-    def call(self, id: int, novel = True) -> None:
+    def call(self, id: int, novel=True) -> None:
         """make application receive a call whose id is <id>."""
         # print to stdout
         if novel:
@@ -45,7 +47,7 @@ class CenterOperator():
                 operator['state'] = 'available'
                 call = operator['call']
                 print(f"Call {call} rejected by operator {id}")
-                self.call(call, novel = False)
+                self.call(call, novel=False)
                 break
         return
 
@@ -62,7 +64,8 @@ class CenterOperator():
                         operator['state'] = 'available'
                         operator['call'] = None
                         op_id = operator['id']
-                        print(f"Call {id} finished and operator {op_id} available")
+                        print(
+                            f"Call {id} finished and operator {op_id} available")
                         break
                     if operator['state'] == 'ringing':
                         operator['state'] = 'available'
@@ -71,8 +74,9 @@ class CenterOperator():
                         break
             # there is a new available operator, so dequeue a call if there is one
             if len(self.__unprocessed_calls) != 0:
-                self.call(self.__unprocessed_calls.popleft(), novel = False)
+                self.call(self.__unprocessed_calls.popleft(), novel=False)
         return
+
 
 if __name__ == "__main__":
     c = CenterOperator()
