@@ -1,12 +1,7 @@
-# Upon receiving a quote from a client, the server
-# will send the client its current quote and store
-# the client's quote to share with the next client.
-# It also keeps track of the number of concurrent
-# client connections.
-
 from twisted.internet.protocol import Factory
 from twisted.internet import reactor, protocol
 from collections import deque
+import json
 
 class RequestProtocol(protocol.Protocol):
     def __init__(self, factory):
@@ -14,34 +9,54 @@ class RequestProtocol(protocol.Protocol):
 
     def dataReceived(self, data):
         # Received the request
-        print("PONG!", data)
+        print("Received from client:", data)
+        request = json.loads(data)
+        command = request['command']
+        identifier = request['id']
+        
+        print("Parsed received data:")
+        print("Command:", command)
+        print("ID:", identifier)
+        print()
 
-        # Must receive not only id, but also the request.
-        # Here comes json.
-
+        self.updateRequest(command, identifier)
         self.transport.write(self.getRequest())
-        self.updateRequest(data)
+        self.factory.response = ''
+
+    def updateRequest(self, command, identifier):
+        if command == "call":
+            self.factory.call(identifier)
+        if command == "answer":
+            self.factory.answer(identifier)
+        if command == "reject":
+            self.factory.reject(identifier)
+        if command == "hangup":
+            self.factory.hangup(identifier)
 
     def getRequest(self):
-        return self.factory.quote
+        return bytes(self.factory.response, 'utf-8')
 
-    def updateRequest(self, quote):
-        self.factory.quote = quote
 
 class RequestFactory(Factory):
+
+    # Call Center Variables
     unprocessed_calls = deque()
     operators = [{'id': 'A', 'state': 'available', 'call': None},
                  {'id': 'B', 'state': 'available', 'call': None}]
+    response = ""
     
+    # legacy
     def __init__(self, quote=None):
         self.quote = quote or b"An apple a day keeps the DOC away."
+    # legacy
 
     def buildProtocol(self, addr):
         return RequestProtocol(self)
 
+    # Call Center Functionality #
     def call(self, arg):
         """make application receive a call whose id is <id>."""
-        self.call(arg)
+        self.aux_call(arg)
 
     def answer(self, id: chr) -> None:
         """make operator <id> answer a call being delivered to it."""
@@ -49,7 +64,7 @@ class RequestFactory(Factory):
             if operator['id'] == id:
                 operator['state'] = 'busy'
                 call = operator['call']
-                print(f"Call {call} answered by operator {id}")
+                self.response += f"Call {call} answered by operator {id}"
                 break
         return
 
@@ -59,7 +74,7 @@ class RequestFactory(Factory):
             if operator['id'] == id:
                 operator['state'] = 'available'
                 call = operator['call']
-                print(f"Call {call} rejected by operator {id}")
+                self.response += f"Call {call} rejected by operator {id}"
                 self.call(call, novel=False)
                 break
         return
@@ -69,7 +84,7 @@ class RequestFactory(Factory):
         # if call is unprocessed, print missed call
         if id in self.unprocessed_calls:
             self.unprocessed_calls.remove(id)
-            print(f"Call {id} missed")
+            self.response += f"Call {id} missed"
         else:
             for operator in self.operators:
                 if operator['call'] == id:
@@ -77,13 +92,12 @@ class RequestFactory(Factory):
                         operator['state'] = 'available'
                         operator['call'] = None
                         op_id = operator['id']
-                        print(
-                            f"Call {id} finished and operator {op_id} available")
+                        self.response += f"Call {id} finished and operator {op_id} available"
                         break
                     if operator['state'] == 'ringing':
                         operator['state'] = 'available'
                         operator['call'] = None
-                        print(f"Call {id} missed")
+                        self.response += f"Call {id} missed"
                         break
             # there is a new available operator, so dequeue a call if there is one
             if len(self.unprocessed_calls) != 0:
@@ -95,11 +109,11 @@ class RequestFactory(Factory):
         print('Thank you for using Operator')
         return True
 
-    def call(self, id: int, novel=True) -> None:
+    def aux_call(self, id: int, novel=True) -> None:
         """auxiliary call function."""
         # print to stdout
         if novel:
-            print(f'Call {id} received')
+            self.response += f'Call {id} received\n'
         # get available operator
         available_operator_found = False
         for operator in self.operators:
@@ -107,11 +121,11 @@ class RequestFactory(Factory):
                 available_operator_found = True
                 operator['state'] = 'ringing'
                 operator['call'] = id
-                print(f"Call {id} ringing for operator {operator['id']}")
+                self.response = f"Call {id} ringing for operator {operator['id']}\n"
                 break
         if not available_operator_found:
             self.unprocessed_calls.append(id)
-            print(f"Call {id} waiting in queue")
+            self.response += f"Call {id} waiting in queue\n"
         return
 
 reactor.listenTCP(8000, RequestFactory())

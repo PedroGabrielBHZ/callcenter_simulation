@@ -1,5 +1,6 @@
-from cmd import Cmd
 from twisted.internet import reactor, protocol
+from cmd import Cmd
+import json
 
 class RequestProtocol(protocol.Protocol):
     def __init__(self, factory):
@@ -14,7 +15,8 @@ class RequestProtocol(protocol.Protocol):
 
     def dataReceived(self, data):
         """Prints out the server's response."""
-        print(data)
+        message = data.decode('utf-8')
+        print(message)
         self.transport.loseConnection()
 
 class RequestClientFactory(protocol.ClientFactory):
@@ -33,12 +35,36 @@ class CenterShell(Cmd):
 
     def do_call(self, arg):
         """make application receive a call whose id is <id>."""
-        reactor.callFromThread(call, str(arg))
+        reactor.callFromThread(call, arg)
+
+    def do_answer(self, arg):
+        reactor.callFromThread(answer, arg)
+
+    def do_reject(self, arg):
+        reactor.callFromThread(reject, arg)
+
+    def do_hangup(self, arg):
+        reactor.callFromThread(hangup, arg)
 
 def call(arg):
-    print("Making a call with id {}".format(arg))
-    reactor.connectTCP('localhost', 8000, RequestClientFactory(bytes(arg, 'utf-8')))
+    request = {"command": "call", "id": arg}
+    request = bytes(json.dumps(request), 'utf-8')
+    reactor.connectTCP('localhost', 8000, RequestClientFactory(request))
         
+def answer(arg):
+    request = {"command": "answer", "id": arg}
+    request = bytes(json.dumps(request), 'utf-8')
+    reactor.connectTCP('localhost', 8000, RequestClientFactory(request))
+
+def reject(arg):
+    request = {"command": "reject", "id": arg}
+    request = bytes(json.dumps(request), 'utf-8')
+    reactor.connectTCP('localhost', 8000, RequestClientFactory(request))
+
+def hangup(arg):
+    request = {"command": "hangup", "id": arg}
+    request = bytes(json.dumps(request), 'utf-8')
+    reactor.connectTCP('localhost', 8000, RequestClientFactory(request))
 
 reactor.callInThread(CenterShell().cmdloop)
 reactor.run()
