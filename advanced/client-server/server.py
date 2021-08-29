@@ -10,22 +10,36 @@ class RequestProtocol(protocol.Protocol):
         self.factory = factory
 
     def dataReceived(self, data):
+        """Receive data, send a signal for the factory, i.e.
+        the call center manager to handle the parsed request,
+        and send back the response down the transport.
+        """
 
-        print("Received from client:", data)
+        # Parse the incoming data, i.e. client's request.
         request = json.loads(data)
         command = request['command']
         identifier = request['id']
 
+        print("Received from client:", data)
         print("Parsed received data:")
         print("Command:", command)
         print("ID:", identifier)
         print()
 
+        # Send the request to the factory.
         self.handleRequest(command, identifier)
-        self.transport.write(self.getRequest())
-        self.factory.response = ''
+
+        # Read the factory's response and send it
+        # back to the client through the transport.
+        self.transport.write(self.readResponse())
 
     def handleRequest(self, command, identifier):
+        """Send a signal to the factory. The signal
+        identifies the client's request, i.e. a function
+        execution with the identifier as input.
+
+        e.g. call <id> -> factory.call(id)
+        """
         if command == "call":
             self.factory.call(identifier)
         if command == "answer":
@@ -35,8 +49,16 @@ class RequestProtocol(protocol.Protocol):
         if command == "hangup":
             self.factory.hangup(identifier)
 
-    def getRequest(self):
+    def readResponse(self):
+        """Read the factory's response after the signal
+        being sent and processed. After the response is
+        read, it is overwritten to give place to a new
+        response corresponding to a new request. The
+        response is encoded in JSON format and sent
+        back in bytes.
+        """
         response = {"response": self.factory.response}
+        self.factory.response = ''
         return bytes(json.dumps(response), 'utf-8')
 
 
@@ -55,7 +77,6 @@ class RequestFactory(Factory):
     # Call Center Functionality #
     def call(self, id):
         """make application receive a call whose id is <id>."""
-
         # Check if the call's id is already taken by some other
         # call being handled by the call center manager.
         call_id_already_taken = False
@@ -156,23 +177,23 @@ class RequestFactory(Factory):
         return True
 
     def aux_call(self, id: int, novel=True) -> None:
-        """auxiliary call function."""
+        """auxiliary call function. It's use is to handle cases
+        when another function makes a call. In that case, the <novel>
+        argument is set to False. When equal to True, it signals that
+        a new call is being received.
+        """
         if novel:
             self.response += f'Call {id} received\n'
-        available_operator_found = False
-        # a new call has come in, look for an available operator
+        # a new call has come in, look for an available operator.
         for operator in self.operators:
             if operator['state'] == 'available':
-                available_operator_found = True
                 operator['state'] = 'ringing'
                 operator['call'] = id
                 self.response += f"Call {id} ringing for operator {operator['id']}\n"
                 return
-        if not available_operator_found:
-            # there is no available operator, put it in the queue
-            self.unprocessed_calls.append(id)
-            self.response += f"Call {id} waiting in queue\n"
-            return
+        # there are no available operators, put the call in the queue.
+        self.unprocessed_calls.append(id)
+        self.response += f"Call {id} waiting in queue\n"
         return
 
 
