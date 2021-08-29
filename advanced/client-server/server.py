@@ -3,17 +3,19 @@ from twisted.internet import reactor, protocol
 from collections import deque
 import json
 
+
 class RequestProtocol(protocol.Protocol):
+
     def __init__(self, factory):
         self.factory = factory
 
     def dataReceived(self, data):
-        # Received the request
+
         print("Received from client:", data)
         request = json.loads(data)
         command = request['command']
         identifier = request['id']
-        
+
         print("Parsed received data:")
         print("Command:", command)
         print("ID:", identifier)
@@ -38,8 +40,6 @@ class RequestProtocol(protocol.Protocol):
         print(json.dumps(response))
         return bytes(json.dumps(response), 'utf-8')
 
-        # return bytes(self.factory.response, 'utf-8')
-
 
 class RequestFactory(Factory):
 
@@ -48,11 +48,7 @@ class RequestFactory(Factory):
     operators = [{'id': 'A', 'state': 'available', 'call': None},
                  {'id': 'B', 'state': 'available', 'call': None}]
     response = ""
-    
-    # legacy
-    def __init__(self, quote=None):
-        self.quote = quote or b"An apple a day keeps the DOC away."
-    # legacy
+
 
     def buildProtocol(self, addr):
         return RequestProtocol(self)
@@ -132,6 +128,6 @@ class RequestFactory(Factory):
             self.response += f"Call {id} waiting in queue\n"
         return
 
+
 reactor.listenTCP(5678, RequestFactory())
 reactor.run()
-
