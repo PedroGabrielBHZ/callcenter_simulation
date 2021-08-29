@@ -4,6 +4,7 @@ import json
 
 
 class RequestProtocol(protocol.Protocol):
+
     def __init__(self, factory):
         self.factory = factory
 
@@ -18,8 +19,7 @@ class RequestProtocol(protocol.Protocol):
         """Prints out the server's decoded response on stdout,
         and close connection.
         """
-        response = json.loads(data)
-        print(response["response"])
+        print(json.loads(data)['response'])
         self.transport.loseConnection()
 
 
@@ -33,7 +33,6 @@ class RequestClientFactory(protocol.ClientFactory):
 
 class CenterShell(Cmd):
     intro = 'Welcome to the Operator shell. Type help or ? to list commands.\n'
-    #prompt = '(center) '
     prompt = ''
 
     def do_EOF(self, arg):
@@ -42,20 +41,31 @@ class CenterShell(Cmd):
 
     def do_call(self, arg):
         """make application receive a call whose id is <id>."""
-        reactor.callFromThread(call, arg)
+        if arg.isnumeric():
+            reactor.callFromThread(call, arg)
+        else:
+            print("<id> must be a integer")
 
     def do_answer(self, arg):
         """make operator <id> answer a call being delivered to it."""
-        reactor.callFromThread(answer, arg)
+        if arg.isnumeric():
+            print("<id> must be a character")
+        else:
+            reactor.callFromThread(answer, arg)
 
     def do_reject(self, arg):
-        """make operator reject a call being delivered to it."""
-        reactor.callFromThread(reject, arg)
+        """make operator <id> reject a call being delivered to it."""
+        if arg.isnumeric():
+            print("<id> must be a character")
+        else:
+            reactor.callFromThread(reject, arg)
 
     def do_hangup(self, arg):
         """make call whose id is <id> be finished."""
-        reactor.callFromThread(hangup, arg)
-
+        if arg.isnumeric():
+            reactor.callFromThread(hangup, arg)
+        else:
+            print("<id> must be a integer")
 
 def call(arg):
     request = {"command": "call", "id": arg}
