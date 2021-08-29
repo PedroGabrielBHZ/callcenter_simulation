@@ -9,7 +9,7 @@ class RequestProtocol(protocol.Protocol):
     def __init__(self, factory):
         self.factory = factory
 
-    def dataReceived(self, data):
+    def dataReceived(self, data, verbose=False):
         """Receive data, send a signal for the factory, i.e.
         the call center manager to handle the parsed request,
         and send back the response down the transport.
@@ -19,12 +19,13 @@ class RequestProtocol(protocol.Protocol):
         request = json.loads(data)
         command = request['command']
         identifier = request['id']
-
-        print("Received from client:", data)
-        print("Parsed received data:")
-        print("Command:", command)
-        print("ID:", identifier)
-        print()
+        
+        if verbose:
+            print("Received from client:", data)
+            print("Parsed received data:")
+            print("Command:", command)
+            print("ID:", identifier)
+            print()
 
         # Send the request to the factory.
         self.handleRequest(command, identifier)
