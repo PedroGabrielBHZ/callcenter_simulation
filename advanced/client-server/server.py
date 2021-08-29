@@ -46,7 +46,7 @@ class RequestFactory(Factory):
     unprocessed_calls = deque()
     operators = [{'id': 'A', 'state': 'available', 'call': None},
                  {'id': 'B', 'state': 'available', 'call': None}]
-    response = ""
+    response = ''
 
 
     def buildProtocol(self, addr):
@@ -56,8 +56,8 @@ class RequestFactory(Factory):
     def call(self, id):
         """make application receive a call whose id is <id>."""
 
-        # Check if the call's id already taken by some call
-        # being handled by the call center manager.
+        # Check if the call's id is already taken by some other
+        # call being handled by the call center manager.
         call_id_already_taken = False
 
         # Check for calls being handled by the operators.
@@ -71,7 +71,7 @@ class RequestFactory(Factory):
                 call_id_already_taken = True
 
         if call_id_already_taken:
-            self.response += f"Call {id} is already being processed.\n"
+            self.response += f'Call {id} is already being processed.\n'
             return
         else:
             # if id is not taken, make the call using the auxiliary function.
@@ -93,10 +93,12 @@ class RequestFactory(Factory):
                         operator['state'] = 'busy'
                         self.response += f"Call {call} answered by operator {id}.\n"
                         return
+
+        self.response += f'There is no operator whose id is equal to {id}.\n'
         return
 
     def reject(self, id):
-        """make operator reject a call being delivered to it."""
+        """make operator <id> reject a call being delivered to it."""
         for operator in self.operators:
             if operator['id'] == id:
                 operator['state'] = 'available'
@@ -109,14 +111,14 @@ class RequestFactory(Factory):
                     # call got rejected, but send it again for processing
                     self.aux_call(call, novel=False)
                     return
+
+        self.response += f'There is no operator whose id is equal to {id}.\n'
         return
 
     def hangup(self, id):
         """make call whose id is <id> be finished."""
-        found_call = False
         # if call is unprocessed, print missed call
         if id in self.unprocessed_calls:
-            found_call = True
             self.unprocessed_calls.remove(id)
             self.response += f"Call {id} missed\n"
             return
@@ -124,7 +126,6 @@ class RequestFactory(Factory):
         else:
             for operator in self.operators:
                 if operator['call'] == id:
-                    found_call = True
                     if operator['state'] == 'busy':
                         # operator has cleanly finished the call
                         operator['state'] = 'available'
@@ -144,9 +145,8 @@ class RequestFactory(Factory):
                         if len(self.unprocessed_calls) != 0:
                             self.aux_call(self.unprocessed_calls.popleft(), novel=False)
                         return
-        # there is no call with id equal to <id>
-        if not found_call:
-            self.response += f"There are no calls with id equal to {id}\n"
+
+        self.response += f"There are no calls with id equal to {id}\n"
         return
         
 
