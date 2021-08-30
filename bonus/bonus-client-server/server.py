@@ -41,6 +41,9 @@ class RequestProtocol(protocol.Protocol):
         # back to the client through the transport.
         self.transport.write(self.readResponse())
 
+        if request['command'] != 'call':
+            self.transport.loseConnection()
+
     def handleRequest(self, command, identifier):
         """Send a signal to the factory. The signal
         identifies the client's request, i.e. a function
@@ -79,7 +82,6 @@ class RequestFactory(Factory):
                  {'id': 'B', 'state': 'available', 'call': None}]
     response = ''
 
-
     def buildProtocol(self, addr):
         return RequestProtocol(self)
 
@@ -107,6 +109,19 @@ class RequestFactory(Factory):
             # if id is not taken, make the call using the auxiliary function.
             self.aux_call(id)
 
+    def timeout(self, id):
+        for operator in self.operators:
+            if operator['call'] == id:
+                if operator['state'] != 'busy':
+                    operator['state'] = 'available'
+                    message = f"Call {id} ignored by operator {operator['id']}"
+                    for client in self.clients:
+                        response = {"response": message}
+                        response = bytes(json.dumps(response), 'utf-8')
+                        client.transport.write(response)
+                        break
+                return
+
     def answer(self, id):
         """make operator <id> answer a call being delivered to it."""
         for operator in self.operators:
@@ -133,7 +148,7 @@ class RequestFactory(Factory):
             if operator['id'] == id:
                 operator['state'] = 'available'
                 call = operator['call']
-                if call == 'None':
+                if call == None:
                     self.response += f"There are no calls for operator {id} to reject.\n"
                     return
                 else:
@@ -199,6 +214,7 @@ class RequestFactory(Factory):
                 operator['state'] = 'ringing'
                 operator['call'] = id
                 self.response += f"Call {id} ringing for operator {operator['id']}\n"
+                self.timeout_call = reactor.callLater(10, self.timeout, id)
                 return
         # there are no available operators, put the call in the queue.
         self.unprocessed_calls.append(id)

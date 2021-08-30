@@ -1,5 +1,6 @@
 from twisted.internet import reactor, protocol
 from twisted.internet.stdio import StandardIO
+from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
 from cmd import Cmd
 import json
@@ -17,6 +18,7 @@ class RequestProtocol(protocol.Protocol):
         input processed by the command shell loop.
         """
         self.transport.write(self.factory.request)
+        reactor.callLater(20, self.transport.loseConnection)
 
 
     def dataReceived(self, data):
@@ -24,7 +26,7 @@ class RequestProtocol(protocol.Protocol):
         stdout. After that, close the connection.
         """
         print(json.loads(data)['response'])
-        self.transport.loseConnection()
+        # self.transport.loseConnection()
 
 
 class RequestClientFactory(protocol.ClientFactory):
@@ -34,14 +36,7 @@ class RequestClientFactory(protocol.ClientFactory):
     def buildProtocol(self, addr):
         return RequestProtocol(self)
 
-
 class CenterShell(Cmd):
-   # intro = 'Welcome to the Call Center shell. Type help or ? to list commands.\n'
-   # prompt = ''
-
-    def precmd(self, line):
-        line = line.decode('utf-8')
-        return line
 
     def do_call(self, arg):
         """make application receive a call whose id is <id>."""
