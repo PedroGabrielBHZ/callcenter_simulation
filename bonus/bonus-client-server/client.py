@@ -20,9 +20,9 @@ class RequestProtocol(protocol.Protocol):
 
     def dataReceived(self, data):
         """Print out the server's decoded response on
-        stdout. After that, close the connection.
+        stdout. After that, close the connection if 
+        wait signal is false.
         """
-        print(data)
         print(json.loads(data)['response'])
         if json.loads(data)['wait']:
             reactor.callLater(15, self.transport.loseConnection)
@@ -39,8 +39,6 @@ class RequestClientFactory(protocol.ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         print("Connection failed:", reason.getErrorMessage())
 
-    def clientConnectionFailed(self, connector, reason):
-        print("Connection failed:", reason.getErrorMessage())
 
 class CenterShell(Cmd):
 
@@ -49,19 +47,19 @@ class CenterShell(Cmd):
         if arg.isnumeric():
             reactor.callFromThread(call, arg)
         else:
-            print("<id> must be a integer")
+            print("error: <id> must be a integer")
 
     def do_answer(self, arg):
         """make operator <id> answer a call being delivered to it."""
         if arg.isnumeric():
-            print("<id> must be a character")
+            print("error: <id> must be a character")
         else:
             reactor.callFromThread(answer, arg)
 
     def do_reject(self, arg):
         """make operator <id> reject a call being delivered to it."""
         if arg.isnumeric():
-            print("<id> must be a character")
+            print("error: <id> must be a character")
         else:
             reactor.callFromThread(reject, arg)
 
@@ -70,7 +68,7 @@ class CenterShell(Cmd):
         if arg.isnumeric():
             reactor.callFromThread(hangup, arg)
         else:
-            print("<id> must be a integer")
+            print("error: <id> must be a integer")
 
     def do_EOF(self, arg):
         """brute force quit using ctrl+d"""

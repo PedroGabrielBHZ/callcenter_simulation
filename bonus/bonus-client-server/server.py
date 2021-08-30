@@ -76,14 +76,13 @@ class RequestFactory(protocol.Factory):
     protocol = RequestProtocol
 
     # Call Center Variables
-    clients = []
-    unprocessed_calls = deque()
-    timeout_calls = []
     response = ''
+    clients = []
+    timeout_calls = []
+    unprocessed_calls = deque()
     operators = [{'id': 'A', 'state': 'available', 'call': None},
                  {'id': 'B', 'state': 'available', 'call': None}]
 
-    # Call Center Functionality #
     def call(self, id):
         """make application receive a call whose id is <id>."""
         # Check if the call's id is already taken by some other
@@ -189,39 +188,51 @@ class RequestFactory(protocol.Factory):
         return True
 
     def aux_call(self, id: int, novel=True) -> None:
-        """auxiliary call function. It's use is to handle cases
+        """auxiliary call function. Used to handle cases
         when another function makes a call. In that case, the <novel>
         argument is set to False. When equal to True, it signals that
-        a new call is being received.
+        a new call is being received from the client.
         """
         if novel:
             self.response += f'Call {id} received\n'
-        # a new call has come in, look for an available operator.
+
+        # a new, pending or rejected call has come in, look for an available operator.
         for operator in self.operators:
             if operator['state'] == 'available':
                 operator['state'] = 'ringing'
                 operator['call'] = id
                 self.response += f"Call {id} ringing for operator {operator['id']}\n"
                 self.add_timeout(id)
-
                 return
+
         # there are no available operators, put the call in the queue.
         self.unprocessed_calls.append(id)
         self.response += f"Call {id} waiting in queue\n"
         return
 
     def add_timeout(self, call):
+        """Add a timeout of 10 seconds for a call
+        that is ringing for an operator. Update
+        factory's list of counting timeouts.
+        """
         timeout_call = reactor.callLater(10, self.on_timeout, call)
         self.timeout_calls.append({'id': call, 'call': timeout_call})
 
     def remove_timeout(self, call):
+        """Remove a timeout from the factory's list
+        and cancel the timeout in the reactor. 
+        """
         for timeout_call in self.timeout_calls:
             if timeout_call['id'] == call:
                 timeout_call['call'].cancel()
                 self.timeout_calls.remove(timeout_call)
-                break
+                return
+        return
 
     def on_timeout(self, id):
+        """Send back a signal to listening clients that the
+        operator responsible for call <id> has ignored it.
+        """
         for operator in self.operators:
             if operator['call'] == id:
                 for timeout_call in self.timeout_calls:
@@ -233,8 +244,8 @@ class RequestFactory(protocol.Factory):
                         for client in self.clients:
                             client.transport.write(bytes(
                                 json.dumps({"response": message, "wait": False}), 'utf-8'))
-                            break
-                return
+                            return
+        return
 
 
 reactor.listenTCP(5678, RequestFactory())
