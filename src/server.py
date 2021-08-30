@@ -165,8 +165,7 @@ class RequestFactory(protocol.Factory):
                         self.response += f"Call {id} finished and operator {op_id} available\n"
                         # there is a new available operator, so dequeue a call if there is one
                         if len(self.unprocessed_calls) != 0:
-                            self.aux_call(
-                                self.unprocessed_calls.popleft(), novel=False)
+                            self.aux_call(self.unprocessed_calls.popleft(), novel=False)
                         return
                     if operator['state'] == 'ringing':
                         # operator missed the ringing call
@@ -175,8 +174,7 @@ class RequestFactory(protocol.Factory):
                         self.response += f"Call {id} missed\n"
                         # there is a new available operator, so dequeue a call if there is one
                         if len(self.unprocessed_calls) != 0:
-                            self.aux_call(
-                                self.unprocessed_calls.popleft(), novel=False)
+                            self.aux_call(self.unprocessed_calls.popleft(), novel=False)
                         return
 
         self.response += f"There are no calls with id equal to {id}\n"
@@ -241,6 +239,9 @@ class RequestFactory(protocol.Factory):
                         operator['state'] = 'available'
                         operator['call'] = None
                         message = f"Call {id} ignored by operator {operator['id']}"
+                        # Try to deque a call - untested
+                        # CODE GOES HERE
+                        #
                         for client in self.clients:
                             client.transport.write(bytes(
                                 json.dumps({"response": message, "wait": False}), 'utf-8'))
