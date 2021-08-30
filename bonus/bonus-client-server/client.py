@@ -2,7 +2,9 @@ from twisted.internet import reactor, protocol
 from twisted.internet.stdio import StandardIO
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
+
 from cmd import Cmd
+
 import json
 
 
@@ -20,13 +22,11 @@ class RequestProtocol(protocol.Protocol):
         self.transport.write(self.factory.request)
         reactor.callLater(20, self.transport.loseConnection)
 
-
     def dataReceived(self, data):
         """Print out the server's decoded response on
         stdout. After that, close the connection.
         """
         print(json.loads(data)['response'])
-        # self.transport.loseConnection()
 
 
 class RequestClientFactory(protocol.ClientFactory):
@@ -35,6 +35,7 @@ class RequestClientFactory(protocol.ClientFactory):
 
     def buildProtocol(self, addr):
         return RequestProtocol(self)
+
 
 class CenterShell(Cmd):
 
@@ -70,6 +71,7 @@ class CenterShell(Cmd):
         """brute force quit using ctrl+d"""
         return True
 
+
 class LineProcessor(LineReceiver):
 
     def __init__(self):
@@ -78,6 +80,7 @@ class LineProcessor(LineReceiver):
 
     def rawDataReceived(self, data):
         self.processor.onecmd(data.decode('utf-8'))
+
 
 def call(arg):
     request = {"command": "call", "id": arg}
@@ -101,6 +104,7 @@ def hangup(arg):
     request = {"command": "hangup", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
     reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
+
 
 StandardIO(LineProcessor())
 reactor.run()
