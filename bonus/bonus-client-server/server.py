@@ -8,9 +8,6 @@ import json
 
 class RequestProtocol(protocol.Protocol):
 
-    def __init__(self, factory):
-        self.factory = factory
-
     def connectionMade(self):
         self.factory.clients.append(self)
 
@@ -75,6 +72,7 @@ class RequestProtocol(protocol.Protocol):
 
 
 class RequestFactory(protocol.Factory):
+    protocol = RequestProtocol
 
     # Call Center Variables
     clients = []
@@ -83,9 +81,6 @@ class RequestFactory(protocol.Factory):
     response = ''
     operators = [{'id': 'A', 'state': 'available', 'call': None},
                  {'id': 'B', 'state': 'available', 'call': None}]
-
-    def buildProtocol(self, addr):
-        return RequestProtocol(self)
 
     # Call Center Functionality #
     def call(self, id):
