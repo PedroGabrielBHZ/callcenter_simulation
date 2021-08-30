@@ -10,9 +10,6 @@ import json
 
 class RequestProtocol(protocol.Protocol):
 
-    def __init__(self, factory):
-        self.factory = factory
-
     def connectionMade(self):
         """The connection has been made, send a request
         to the server through the transport. The request
@@ -30,12 +27,10 @@ class RequestProtocol(protocol.Protocol):
 
 
 class RequestClientFactory(protocol.ClientFactory):
+    protocol = RequestProtocol
 
     def __init__(self, request):
         self.request = request
-
-    def buildProtocol(self, addr):
-        return RequestProtocol(self)
 
 
 class CenterShell(Cmd):
