@@ -9,15 +9,17 @@ class RequestProtocol(protocol.Protocol):
         self.factory = factory
 
     def connectionMade(self):
-        self.sendRequest()
-
-    def sendRequest(self):
-        """Send a request to the server."""
+        """The connection has been made, send a request
+        to the server through the transport. The request
+        is stored in the factory and is equal to the last
+        input processed by the command shell loop.
+        """
         self.transport.write(self.factory.request)
 
+
     def dataReceived(self, data):
-        """Prints out the server's decoded response on stdout,
-        and close connection.
+        """Print out the server's decoded response on
+        stdout. After that, close the connection.
         """
         print(json.loads(data)['response'])
         self.transport.loseConnection()
@@ -32,12 +34,9 @@ class RequestClientFactory(protocol.ClientFactory):
 
 
 class CenterShell(Cmd):
-    intro = 'Welcome to the Operator shell. Type help or ? to list commands.\n'
+    intro = 'Welcome to the Call Center shell. Type help or ? to list commands.\n'
     prompt = ''
 
-    def do_EOF(self, arg):
-        """brute force quit using ctrl+d"""
-        return True
 
     def do_call(self, arg):
         """make application receive a call whose id is <id>."""
@@ -66,6 +65,11 @@ class CenterShell(Cmd):
             reactor.callFromThread(hangup, arg)
         else:
             print("<id> must be a integer")
+
+    def do_EOF(self, arg):
+        """brute force quit using ctrl+d"""
+        return True
+
 
 def call(arg):
     request = {"command": "call", "id": arg}

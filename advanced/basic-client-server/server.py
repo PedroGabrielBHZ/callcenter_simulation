@@ -1,4 +1,5 @@
 from twisted.internet.protocol import Factory
+from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor, protocol
 from collections import deque
 import json
@@ -8,6 +9,12 @@ class RequestProtocol(protocol.Protocol):
 
     def __init__(self, factory):
         self.factory = factory
+
+    def connectionMade(self):
+        self.factory.clients.append(self)
+
+    def connectionLost(self, reason):
+        self.factory.clients.remove(self)
 
     def dataReceived(self, data, verbose=False):
         """Receive data, send a signal for the factory, i.e.
@@ -66,6 +73,7 @@ class RequestProtocol(protocol.Protocol):
 class RequestFactory(Factory):
 
     # Call Center Variables
+    clients = []
     unprocessed_calls = deque()
     operators = [{'id': 'A', 'state': 'available', 'call': None},
                  {'id': 'B', 'state': 'available', 'call': None}]
