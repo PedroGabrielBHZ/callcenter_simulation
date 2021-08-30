@@ -32,6 +32,13 @@ class RequestClientFactory(protocol.ClientFactory):
     def __init__(self, request):
         self.request = request
 
+    def clientConnectionFailed(self, connector, reason):
+        print("Connection failed:", reason.getErrorMessage())
+        reactor.stop()
+
+    def clientConnectionFailed(self, connector, reason):
+        print("Connection failed:", reason.getErrorMessage())
+        reactor.stop()
 
 class CenterShell(Cmd):
 
