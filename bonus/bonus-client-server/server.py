@@ -39,8 +39,6 @@ class RequestProtocol(protocol.Protocol):
         # back to the client through the transport.
         self.transport.write(self.readResponse())
 
-        if request['command'] != 'call':
-            self.transport.loseConnection()
 
     def handleRequest(self, command, identifier):
         """Send a signal to the factory. The signal
@@ -64,9 +62,12 @@ class RequestProtocol(protocol.Protocol):
         read, it is overwritten to give place to a new
         response corresponding to a new request. The
         response is encoded in JSON format and sent
-        back in bytes.
+        back in bytes. If there is a pending timeout,
+        send a wait signal along with the response
+        telling the client to hold the connection.
         """
-        response = {"response": self.factory.response}
+        response = {"response": self.factory.response,
+                    "wait": self.factory.timeout_calls != []}
         self.factory.response = ''
         return bytes(json.dumps(response), 'utf-8')
 
@@ -231,7 +232,7 @@ class RequestFactory(protocol.Factory):
                         message = f"Call {id} ignored by operator {operator['id']}"
                         for client in self.clients:
                             client.transport.write(bytes(
-                                json.dumps({"response": message}), 'utf-8'))
+                                json.dumps({"response": message, "wait": False}), 'utf-8'))
                             break
                 return
 

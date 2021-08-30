@@ -17,13 +17,17 @@ class RequestProtocol(protocol.Protocol):
         input processed by the command shell loop.
         """
         self.transport.write(self.factory.request)
-        reactor.callLater(20, self.transport.loseConnection)
 
     def dataReceived(self, data):
         """Print out the server's decoded response on
         stdout. After that, close the connection.
         """
+        print(data)
         print(json.loads(data)['response'])
+        if json.loads(data)['wait']:
+            reactor.callLater(15, self.transport.loseConnection)
+        else:
+            self.transport.loseConnection()
 
 
 class RequestClientFactory(protocol.ClientFactory):
@@ -34,11 +38,9 @@ class RequestClientFactory(protocol.ClientFactory):
 
     def clientConnectionFailed(self, connector, reason):
         print("Connection failed:", reason.getErrorMessage())
-        reactor.stop()
 
     def clientConnectionFailed(self, connector, reason):
         print("Connection failed:", reason.getErrorMessage())
-        reactor.stop()
 
 class CenterShell(Cmd):
 
@@ -72,6 +74,13 @@ class CenterShell(Cmd):
 
     def do_EOF(self, arg):
         """brute force quit using ctrl+d"""
+        reactor.stop()
+        return True
+
+    def do_exit(self, arg):
+        """cleanly quit the program and stop the reactor."""
+        print("Goodbye!")
+        reactor.stop()
         return True
 
 
