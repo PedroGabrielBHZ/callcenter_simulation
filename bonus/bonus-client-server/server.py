@@ -1,4 +1,3 @@
-from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor, protocol
 
@@ -75,7 +74,7 @@ class RequestProtocol(protocol.Protocol):
         return bytes(json.dumps(response), 'utf-8')
 
 
-class RequestFactory(Factory):
+class RequestFactory(protocol.Factory):
 
     # Call Center Variables
     clients = []

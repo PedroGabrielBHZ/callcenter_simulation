@@ -30,6 +30,7 @@ class RequestProtocol(protocol.Protocol):
 
 
 class RequestClientFactory(protocol.ClientFactory):
+
     def __init__(self, request):
         self.request = request
 
