@@ -8,11 +8,11 @@ import json
 
 class RequestProtocol(protocol.Protocol):
 
-   # def connectionMade(self):
-   #     self.factory.clients.append(self)
+    def connectionMade(self):
+        self.factory.clients.append(self)
 
-   # def connectionLost(self, reason):
-   #     self.factory.clients.remove(self)
+    def connectionLost(self, reason):
+        self.factory.clients.remove(self)
 
     def dataReceived(self, data, verbose=False):
         """Receive data, send a signal for the factory, i.e.
@@ -51,12 +51,10 @@ class RequestProtocol(protocol.Protocol):
         """
         if command == "call":
             self.factory.call(identifier)
-            self.factory.clients[self] = identifier
         if command == "answer":
             self.factory.answer(identifier)
         if command == "reject":
             self.factory.reject(identifier)
-            self.factory.clients[self] = identifier
         if command == "hangup":
             self.factory.hangup(identifier)
 
@@ -85,8 +83,7 @@ class RequestFactory(protocol.Factory):
     response = ''
 
     # A list of current connected clients.
-    # clients = []
-    clients = {'client': 'id'}
+    clients = []
 
     # A list of current timeout objects representing calls
     # that will be potentially ignored by the operator.
@@ -272,12 +269,10 @@ class RequestFactory(protocol.Factory):
         """Send back a signal to listening clients that the
         operator responsible for call <id> has ignored it.
         """
-        print(f"call {id} timeoutted!")
         operator, operator_id = self.get_operator(id)
         if operator != None:
             for timeout_call in self.timeout_calls:
                 if timeout_call['id'] == id:
-                    print("removing timeout register")
                     self.timeout_calls.remove(timeout_call)
                     operator['state'] = 'available'
                     operator['call'] = None
@@ -288,14 +283,11 @@ class RequestFactory(protocol.Factory):
                     else:
                         wait = False
 
-                    # This solution is error-prone if there are more than just
                     for client in self.clients:
-                        if self.clients[client] == id:
-                            client.transport.write(bytes(json.dumps(
-                                {"response": self.response, "wait": wait}), 'utf-8'))
-                        # return
-                    self.response = ''
-                    return
+                        client.transport.write(bytes(json.dumps(
+                            {"response": self.response, "wait": wait}), 'utf-8'))
+                        self.response = ''
+                        return
         return
 
     def get_operator(self, id):
