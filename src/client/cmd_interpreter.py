@@ -10,6 +10,8 @@ import json
 
 class RequestProtocol(protocol.Protocol):
 
+    wait_call = None
+
     def connectionMade(self):
         """The connection has been made, send a request
         to the server through the transport. The request
@@ -24,8 +26,14 @@ class RequestProtocol(protocol.Protocol):
         'wait' signal is false.
         """
         print(json.loads(data)['response'])
+
         if json.loads(data)['wait']:
-            reactor.callLater(15, self.transport.loseConnection)
+            new_wait_call = reactor.callLater(15, self.transport.loseConnection)
+            if self.wait_call != None:
+                self.wait_call.cancel()
+                self.wait_call = new_wait_call
+            else:
+                self.wait_call = new_wait_call
         else:
             self.transport.loseConnection()
 

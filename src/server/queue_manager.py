@@ -8,11 +8,11 @@ import json
 
 class RequestProtocol(protocol.Protocol):
 
-    def connectionMade(self):
-        self.factory.clients.append(self)
+   # def connectionMade(self):
+   #     self.factory.clients.append(self)
 
-    def connectionLost(self, reason):
-        self.factory.clients.remove(self)
+   # def connectionLost(self, reason):
+   #     self.factory.clients.remove(self)
 
     def dataReceived(self, data, verbose=False):
         """Receive data, send a signal for the factory, i.e.
@@ -51,10 +51,12 @@ class RequestProtocol(protocol.Protocol):
         """
         if command == "call":
             self.factory.call(identifier)
+            self.factory.clients[self] = identifier
         if command == "answer":
             self.factory.answer(identifier)
         if command == "reject":
             self.factory.reject(identifier)
+            self.factory.clients[self] = identifier
         if command == "hangup":
             self.factory.hangup(identifier)
 
@@ -83,7 +85,8 @@ class RequestFactory(protocol.Factory):
     response = ''
 
     # A list of current connected clients.
-    clients = []
+    # clients = []
+    clients = {'client': 'id'}
 
     # A list of current timeout objects representing calls
     # that will be potentially ignored by the operator.
@@ -93,17 +96,17 @@ class RequestFactory(protocol.Factory):
     # that are currently waiting for an available operator.
     unprocessed_calls = deque()
 
-    # A list of the call center's operators. Each operator is
+    # The call center's operators. Each operator is
     # represented by a dictionary with keys mapping to the
     # operator current state and current assigned call.
-    operators = {'A': {'state': 'available', 'call': None},
+    operators = {'A' : {'state': 'available', 'call': None},
                  'B' : {'state': 'available', 'call': None}}
 
 
     def call(self, id):
         """Process an incoming call from the client.
         If there are calls with the same id being processed
-        by the call center, send back a response telling
+        by the call center, send back a response telling the
         client that this call is being handled. Else, invoke
         the aux_call function, responsible for checking if 
         there are available operators to handle the call. If
@@ -123,6 +126,7 @@ class RequestFactory(protocol.Factory):
         response accordingly. If operator is available, set his state
         to busy and remove the call's timeout.
         """
+        # Try to find operator <id>. If there is no operator <id>, except.
         try: 
             operator = self.operators[id]
             if operator['state'] == 'busy':
@@ -134,11 +138,11 @@ class RequestFactory(protocol.Factory):
                     self.response += f"There are no calls for operator {id}.\n"
                     return
                 else:
+                    # Set the operator as busy, update response and remove timeout.
                     operator['state'] = 'busy'
                     self.response += f"Call {call} answered by operator {id}.\n"
                     self.remove_timeout(call)
                     return
-
         except:
             self.response += f'There is no operator whose id is equal to {id}.\n'
             return
@@ -151,17 +155,19 @@ class RequestFactory(protocol.Factory):
         timeout and send the rejected call through aux_call() to be
         handled again by the call center.
         """
+        # Try to find operator <id>. If there is no operator <id>, except.
         try:
             operator = self.operators[id]
-            operator['state'] = 'available'
             call = operator['call']
             if call == None:
                 self.response += f"There are no calls for operator {id} to reject.\n"
                 return
             else:
+                # Free the operator, update response and remove timeout.
+                operator['state'] = 'available'
                 self.response += f"Call {call} rejected by operator {id}\n"
                 self.remove_timeout(call)
-                # call got rejected, but send it again for processing
+                # Call got rejected, but it must be sent again for processing.
                 self.aux_call(call, novel=False)
                 return
         except:
@@ -169,7 +175,11 @@ class RequestFactory(protocol.Factory):
             return
 
     def hangup(self, id):
-        """make call whose id is <id> be finished."""
+        """Make call whose id is <id> be finished. If the call being hung up
+        is in the queue, remove it from the queue and tell the client that this
+        call was missed. If the operator was handling call <id>, set the operator
+        as available and try to dequeue a call. If the call was ringing, tell the
+        client that call <id> was missed and try to dequeue a call."""
         # if call is unprocessed, print missed call
         if id in self.unprocessed_calls:
             self.unprocessed_calls.remove(id)
@@ -185,8 +195,9 @@ class RequestFactory(protocol.Factory):
                     operator['call'] = None
                     self.response += f"Call {id} finished and operator {operator_id} available\n"
                     # there is a new available operator, so dequeue a call if there is one
-                    if len(self.unprocessed_calls) != 0:
-                        self.aux_call(self.unprocessed_calls.popleft(), novel=False)
+                    self.try_dequeueing_call()
+                   # if len(self.unprocessed_calls) != 0:
+                   #     self.aux_call(self.unprocessed_calls.popleft(), novel=False)
                     return
                 if operator['state'] == 'ringing':
                     # operator missed the ringing call
@@ -194,8 +205,9 @@ class RequestFactory(protocol.Factory):
                     operator['call'] = None
                     self.response += f"Call {id} missed\n"
                     # there is a new available operator, so dequeue a call if there is one
-                    if len(self.unprocessed_calls) != 0:
-                        self.aux_call(self.unprocessed_calls.popleft(), novel=False)
+                    self.try_dequeueing_call()
+                   # if len(self.unprocessed_calls) != 0:
+                   #     self.aux_call(self.unprocessed_calls.popleft(), novel=False)
                     return
 
         self.response += f"There are no calls with id equal to {id}\n"
@@ -205,6 +217,14 @@ class RequestFactory(protocol.Factory):
         """close application"""
         print('Thank you for using Operator')
         return True
+
+    def try_dequeueing_call(self):
+        """Dequeue a call if there are any in queue."""
+        if len(self.unprocessed_calls) != 0:
+            self.aux_call(self.unprocessed_calls.popleft(), novel=False)
+            return True
+        return False
+
 
     def aux_call(self, id: int, novel=True) -> None:
         """Auxiliary call function. Used to handle cases when
@@ -252,23 +272,30 @@ class RequestFactory(protocol.Factory):
         """Send back a signal to listening clients that the
         operator responsible for call <id> has ignored it.
         """
+        print(f"call {id} timeoutted!")
         operator, operator_id = self.get_operator(id)
         if operator != None:
             for timeout_call in self.timeout_calls:
                 if timeout_call['id'] == id:
+                    print("removing timeout register")
                     self.timeout_calls.remove(timeout_call)
                     operator['state'] = 'available'
                     operator['call'] = None
                     self.response = f"Call {id} ignored by operator {operator_id}\n"
+                    dequeued_a_call = self.try_dequeueing_call()
+                    if dequeued_a_call:
+                        wait = True
+                    else:
+                        wait = False
 
-                    if len(self.unprocessed_calls) != 0:
-                        self.aux_call(self.unprocessed_calls.popleft(), novel=False)
-
+                    # This solution is error-prone if there are more than just
                     for client in self.clients:
-                        client.transport.write(bytes(json.dumps(
-                            {"response": self.response, "wait": False}), 'utf-8'))
-                        self.response = ''
-                        return
+                        if self.clients[client] == id:
+                            client.transport.write(bytes(json.dumps(
+                                {"response": self.response, "wait": wait}), 'utf-8'))
+                        # return
+                    self.response = ''
+                    return
         return
 
     def get_operator(self, id):
