@@ -18,8 +18,9 @@ class RequestProtocol(protocol.Protocol):
         """Receive data, send a signal for the factory, i.e.
         the call center manager to handle the parsed request,
         and send back the response down the transport.
+        If verbose is set to True, print incoming data on
+        stdout.
         """
-
         # Parse the incoming data, i.e. client's request.
         request = json.loads(data)
         command = request['command']
@@ -32,7 +33,8 @@ class RequestProtocol(protocol.Protocol):
             print("ID:", identifier)
             print()
 
-        # Send the request to the factory.
+        # Handle the request, sending the appropriate
+        # command to the factory.
         self.handleRequest(command, identifier)
 
         # Read the factory's response and send it
@@ -43,7 +45,7 @@ class RequestProtocol(protocol.Protocol):
     def handleRequest(self, command, identifier):
         """Send a signal to the factory. The signal
         identifies the client's request, i.e. a function
-        execution with the identifier as input.
+        execution along with the identifier as input.
 
         e.g. call <id> -> factory.call(id)
         """
@@ -59,10 +61,10 @@ class RequestProtocol(protocol.Protocol):
     def readResponse(self):
         """Read the factory's response after the signal
         being sent and processed. After the response is
-        read, it is overwritten to give place to a new
+        read, it is overwritten to give place to a future
         response corresponding to a new request. The
         response is encoded in JSON format and sent
-        back in bytes. If there is a pending timeout,
+        back in bytes. If there are pending timeouts,
         send a wait signal along with the response
         telling the client to hold the connection.
         """
@@ -76,30 +78,38 @@ class RequestFactory(protocol.Factory):
     protocol = RequestProtocol
 
     # Call Center Variables
+
+    # The factory's response to be sent back to client.
     response = ''
+
+    # A list of current connected clients.
     clients = []
+
+    # A list of current timeout objects representing calls
+    # that will be potentially ignored by the operator.
     timeout_calls = []
+
+    # A queue data structure responsible for storing calls
+    # that are currently waiting for an available operator.
     unprocessed_calls = deque()
+
+    # A list of the call center's operators. Each operator is
+    # represented by a dictionary with keys mapping to the
+    # operator current state and current assigned call.
     operators = [{'id': 'A', 'state': 'available', 'call': None},
                  {'id': 'B', 'state': 'available', 'call': None}]
 
+
     def call(self, id):
-        """make application receive a call whose id is <id>."""
-        # Check if the call's id is already taken by some other
-        # call being handled by the call center manager.
-        call_id_already_taken = False
-
-        # Check for calls being handled by the operators.
-        for operator in self.operators:
-            if operator['call'] == id:
-                call_id_already_taken = True
-
-        # Check for calls in the waiting queue.
-        for call in self.unprocessed_calls:
-            if call == id:
-                call_id_already_taken = True
-
-        if call_id_already_taken:
+        """Process an incoming call from the client.
+        If there are calls with the same id being processed
+        by the call center, send back a response telling
+        client that this call is being handled. Else, invoke
+        the aux_call function, responsible for checking if 
+        there are available operators to handle the call. If
+        not, the call is sent to the queue.
+        """
+        if self.id_already_taken(id):
             self.response += f'Call {id} is already being processed.\n'
             return
         else:
@@ -247,6 +257,24 @@ class RequestFactory(protocol.Factory):
                                 json.dumps({"response": message, "wait": False}), 'utf-8'))
                             return
         return
+
+    def id_already_taken(self, id):
+        """ Check if the call's id is already taken by some other
+        call being handled by the call center manager.
+        """
+        call_id_already_taken = False
+
+        # Check for calls being handled by the operators.
+        for operator in self.operators:
+            if operator['call'] == id:
+                call_id_already_taken = True
+
+        # Check for calls in the waiting queue.
+        for call in self.unprocessed_calls:
+            if call == id:
+                call_id_already_taken = True
+        
+        return call_id_already_taken
 
 
 reactor.listenTCP(5678, RequestFactory())
