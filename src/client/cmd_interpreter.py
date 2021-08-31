@@ -21,7 +21,7 @@ class RequestProtocol(protocol.Protocol):
     def dataReceived(self, data):
         """Print out the server's decoded response on
         stdout. After that, close the connection if 
-        wait signal is false.
+        'wait' signal is false.
         """
         print(json.loads(data)['response'])
         if json.loads(data)['wait']:
@@ -37,46 +37,61 @@ class RequestClientFactory(protocol.ClientFactory):
         self.request = request
 
     def clientConnectionFailed(self, connector, reason):
+        """Print out the reason if client failed to connect
+        to the server.
+        """
         print("Connection failed:", reason.getErrorMessage())
 
 
 class CenterShell(Cmd):
 
     def do_call(self, arg):
-        """make application receive a call whose id is <id>."""
+        """Make application receive a call whose id is <id>.
+        The id should be an integer.
+        Usage: call <id>
+        """
         if arg.isnumeric():
             reactor.callFromThread(call, arg)
         else:
             print("error: <id> must be a integer")
 
     def do_answer(self, arg):
-        """make operator <id> answer a call being delivered to it."""
+        """Make operator <id> answer a call being delivered to it.
+        The id should be a character.
+        Usage: answer <id>
+        """
         if arg.isnumeric():
             print("error: <id> must be a character")
         else:
             reactor.callFromThread(answer, arg)
 
     def do_reject(self, arg):
-        """make operator <id> reject a call being delivered to it."""
+        """Make operator <id> reject a call being delivered to it.
+        The id should be a character.
+        Usage: reject <id>
+        """
         if arg.isnumeric():
             print("error: <id> must be a character")
         else:
             reactor.callFromThread(reject, arg)
 
     def do_hangup(self, arg):
-        """make call whose id is <id> be finished."""
+        """Make call whose id is <id> be finished.
+        The id should should be an integer.
+        Usage: hangup <id>
+        """
         if arg.isnumeric():
             reactor.callFromThread(hangup, arg)
         else:
             print("error: <id> must be a integer")
 
     def do_EOF(self, arg):
-        """brute force quit using ctrl+d"""
+        """Quit the program by pressing ctrl+d"""
         reactor.stop()
         return True
 
     def do_exit(self, arg):
-        """cleanly quit the program and stop the reactor."""
+        """Cleanly quit the program."""
         print("Goodbye!")
         reactor.stop()
         return True
@@ -89,28 +104,40 @@ class LineProcessor(LineReceiver):
         self.setRawMode()
 
     def rawDataReceived(self, data):
+        """Send out the input to the command interpreter."""
         self.processor.onecmd(data.decode('utf-8'))
 
 
 def call(arg):
+    """Create a protocol signaling an incoming call with id <arg>.
+    This request is to be handled by the queue manager in the server."""
     request = {"command": "call", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
     reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
 
 
 def answer(arg):
+    """Create a protocol signaling that operator with id <arg> 
+    answered his assigned call. This request is to be handled
+    by the queue manager in the server."""
     request = {"command": "answer", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
     reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
 
 
 def reject(arg):
+    """Create a protocol signaling that operator with id <arg> 
+    rejected his assigned call. This request is to be handled 
+    by the queue manager in the server."""
     request = {"command": "reject", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
     reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
 
 
 def hangup(arg):
+    """Create a protocol signaling that operator with id <arg> 
+    hung up his assigned call. This request is to be handled by
+    the queue manager in the server."""
     request = {"command": "hangup", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
     reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
