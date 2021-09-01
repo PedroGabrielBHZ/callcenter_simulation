@@ -45,7 +45,6 @@ class RequestProtocol(protocol.Protocol):
         # back to the client through the transport.
         self.transport.write(self.readResponse())
 
-
     def handleRequest(self, command, identifier):
         """Send a signal to the factory. The signal
         identifies the client's request, i.e. a function
@@ -100,9 +99,8 @@ class RequestFactory(protocol.Factory):
     # The call center's operators. Each operator is
     # represented by a dictionary with keys mapping to the
     # operator current state and current assigned call.
-    operators = {'A' : {'state': 'available', 'call': None},
-                 'B' : {'state': 'available', 'call': None}}
-
+    operators = {'A': {'state': 'available', 'call': None},
+                 'B': {'state': 'available', 'call': None}}
 
     def call(self, id):
         """Process an incoming call from the client.
@@ -128,7 +126,7 @@ class RequestFactory(protocol.Factory):
         to busy and remove the call's timeout.
         """
         # Try to find operator <id>. If there is no operator <id>, except.
-        try: 
+        try:
             operator = self.operators[id]
             if operator['state'] == 'busy':
                 self.response += f"Operator {id} is already in a call.\n"
@@ -226,7 +224,6 @@ class RequestFactory(protocol.Factory):
             return True
         return False
 
-
     def aux_call(self, id: int, novel=True) -> None:
         """Auxiliary call function. Used to handle cases when
         another function makes a call. In that case, the <novel>
@@ -308,7 +305,6 @@ class RequestFactory(protocol.Factory):
         # operator not found, return None
         return None, None
 
-
     def id_already_taken(self, id):
         """ Check if the call's id is already taken by some other
         call being handled by the call center manager.
@@ -324,5 +320,5 @@ class RequestFactory(protocol.Factory):
         for call in self.unprocessed_calls:
             if call == id:
                 call_id_already_taken = True
-        
+
         return call_id_already_taken

@@ -15,16 +15,16 @@ class RequestProtocol(protocol.Protocol):
 
     def connectionMade(self):
         """The connection has been made, send a request
-        to the server through the transport. The request
-        is stored in the factory and is equal to the last
-        input processed by the command shell loop.
+        to the server through the transport.
         """
         self.transport.write(self.factory.request)
 
     def dataReceived(self, data):
         """Print out the server's decoded response on
         stdout. After that, close the connection if 
-        'wait' signal is false.
+        'wait' signal is False. If True, update the
+        connection timeout by cancelling the last 
+        callLater and setting it to most recent call.
         """
         print(json.loads(data)['response'])
 
@@ -63,7 +63,7 @@ class CenterShell(Cmd):
         if arg.isnumeric():
             reactor.callFromThread(call, arg)
         else:
-            print("error: <id> must be a integer")
+            print("error: <id> must be an integer")
 
     def do_answer(self, arg):
         """Make operator <id> answer a call being delivered to it.
@@ -93,7 +93,7 @@ class CenterShell(Cmd):
         if arg.isnumeric():
             reactor.callFromThread(hangup, arg)
         else:
-            print("error: <id> must be a integer")
+            print("error: <id> must be an integer")
 
     def do_EOF(self, arg):
         """Quit the program by pressing ctrl+d"""
@@ -114,7 +114,7 @@ class LineProcessor(LineReceiver):
         self.setRawMode()
 
     def rawDataReceived(self, data):
-        """Send out the input to the command interpreter."""
+        """Send out the input to the command interpreter CenterShell."""
         self.processor.onecmd(data.decode('utf-8'))
 
 host = 'localhost'
