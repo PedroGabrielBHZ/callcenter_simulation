@@ -180,7 +180,7 @@ class RequestFactory(protocol.Factory):
         call was missed. If the operator was handling call <id>, set the operator
         as available and try to dequeue a call. If the call was ringing, tell the
         client that call <id> was missed and try to dequeue a call."""
-        # if call is unprocessed, print missed call
+        # if call is on wait, print that call was missed
         if id in self.calls_on_wait:
             self.calls_on_wait.remove(id)
             self.response += f"Call {id} missed\n"
@@ -190,14 +190,12 @@ class RequestFactory(protocol.Factory):
             operator, operator_id = self.get_operator_by_call(id)
             if operator != None:
                 if operator['state'] == 'busy':
-                    # operator has cleanly finished the call
+                    # operator has cleanly finished his/her call
                     operator['state'] = 'available'
                     operator['call'] = None
                     self.response += f"Call {id} finished and operator {operator_id} available\n"
                     # there is a new available operator, so dequeue a call if there is one
                     self.try_dequeueing_call()
-                   # if len(self.calls_on_wait) != 0:
-                   #     self.aux_call(self.calls_on_wait.popleft(), novel=False)
                     return
                 if operator['state'] == 'ringing':
                     # operator missed the ringing call
@@ -206,17 +204,10 @@ class RequestFactory(protocol.Factory):
                     self.response += f"Call {id} missed\n"
                     # there is a new available operator, so dequeue a call if there is one
                     self.try_dequeueing_call()
-                   # if len(self.calls_on_wait) != 0:
-                   #     self.aux_call(self.calls_on_wait.popleft(), novel=False)
                     return
 
         self.response += f"There are no calls with id equal to {id}\n"
         return
-
-    def exit(self, arg):
-        """close application"""
-        print('Thank you for using Operator')
-        return True
 
     def try_dequeueing_call(self):
         """Dequeue a call if there are any in queue."""
@@ -248,20 +239,20 @@ class RequestFactory(protocol.Factory):
         self.response += f"Call {id} waiting in queue\n"
         return
 
-    def add_timeout(self, call):
+    def add_timeout(self, id):
         """Add a timeout of 10 seconds for a call
         that is ringing for an operator. Update
-        factory's list of counting timeouts.
+        manager's list of counting timeouts.
         """
-        timeout_call = reactor.callLater(10, self.on_timeout, call)
-        self.timeout_calls.append({'id': call, 'call': timeout_call})
+        timeout_call = reactor.callLater(10, self.on_timeout, id)
+        self.timeout_calls.append({'id': id, 'call': timeout_call})
 
-    def remove_timeout(self, call):
-        """Remove a timeout from the factory's list
-        and cancel the timeout in the reactor. 
+    def remove_timeout(self, id):
+        """Remove a timeout from the manager's list by the
+        call's id and cancel the timeout in the reactor. 
         """
         for timeout_call in self.timeout_calls:
-            if timeout_call['id'] == call:
+            if timeout_call['id'] == id:
                 timeout_call['call'].cancel()
                 self.timeout_calls.remove(timeout_call)
                 return
@@ -282,6 +273,7 @@ class RequestFactory(protocol.Factory):
                     self.try_dequeueing_call()
 
                     # This may break if there are different client-programs.
+                    # It only sends to the first listening client found.
                     wait = self.timeout_calls != []
                     for client in self.clients:
                         client.transport.write(bytes(json.dumps(
@@ -300,7 +292,7 @@ class RequestFactory(protocol.Factory):
             if self.operators[operator_id]['call'] == id:
                 return self.operators[operator_id], operator_id
 
-        # operator not found, return None
+        # operator not found, return a None tuple.
         return None, None
 
     def id_already_taken(self, id):
