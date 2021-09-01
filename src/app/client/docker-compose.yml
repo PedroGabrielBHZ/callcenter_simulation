@@ -1,0 +1,7 @@
+callcenter_client:
+  build: .
+    #ports:
+    #  - "8000:8000"
+    #  - "6000:6000"
+  volumes:
+    - .:/client_app

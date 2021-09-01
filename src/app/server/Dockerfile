@@ -6,7 +6,6 @@ RUN apt-get upgrade -y
 
 RUN apt-get -y install python3 \
                        python3-pip
-
 COPY . /app
 WORKDIR /app
 

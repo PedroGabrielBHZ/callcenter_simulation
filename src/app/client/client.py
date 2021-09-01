@@ -124,7 +124,6 @@ def call(arg):
     request = bytes(json.dumps(request), 'utf-8')
     reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
 
-
 def answer(arg):
     """Create a protocol signaling that operator with id <arg> 
     answered his assigned call. This request is to be handled
@@ -154,6 +153,5 @@ def hangup(arg):
 class ShellService(service.Service):
 
     def startService(self):
-        #service.Service.startService(self)
         StandardIO(LineProcessor())
 

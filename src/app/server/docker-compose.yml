@@ -1,4 +1,4 @@
-echoserver:
+callcenter_server:
   environment:
     - ECHO_SERVER_PORT
   build: .
