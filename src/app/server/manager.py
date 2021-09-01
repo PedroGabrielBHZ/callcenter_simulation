@@ -1,7 +1,11 @@
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor, protocol
+from twisted.application import service, internet
 
 from collections import deque
+
+import os
+import sys
 
 import json
 
@@ -323,6 +327,13 @@ class RequestFactory(protocol.Factory):
         
         return call_id_already_taken
 
+## Default port in case the env var was not properly sert
+#CC_SERVER_PORT = 5678
+#
+#proxy_port = int(os.environ.get('CC_SERVER_PORT', CC_SERVER_PORT))
+#
+#application = service.Application('TwistedDockerized')
+#factory = RequestFactory()
+#server = internet.TCPServer(proxy_port, factory)
+#server.setServiceParent(application)
 
-reactor.listenTCP(5678, RequestFactory())
-reactor.run()
