@@ -2,7 +2,6 @@ from twisted.internet import reactor, protocol
 from twisted.internet.stdio import StandardIO
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
-from twisted.application import service, internet
 
 from cmd import Cmd
 
@@ -151,6 +150,17 @@ def hangup(arg):
     request = bytes(json.dumps(request), 'utf-8')
     reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
 
+class ShellService(service.Service):
 
-StandardIO(LineProcessor())
-reactor.run()
+    def startService(self):
+        #service.Service.startService(self)
+        StandardIO(LineProcessor())
+
+top_service = service.MultiService()
+
+shell_service = ShellService()
+shell_service.setServiceParent(top_service)
+
+application = service.Application('TwistedShell')
+
+top_service.setServiceParent(application)
