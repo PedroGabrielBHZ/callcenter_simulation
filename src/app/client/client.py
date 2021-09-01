@@ -118,6 +118,7 @@ class LineProcessor(LineReceiver):
         self.processor.onecmd(data.decode('utf-8'))
 
 host = 'localhost'
+#host = '0.0.0.0:5001'
 port = 5678
 
 def call(arg):

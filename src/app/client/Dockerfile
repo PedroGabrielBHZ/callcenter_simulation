@@ -11,4 +11,7 @@ WORKDIR /app
 
 RUN pip3 install -r requirements.txt
 
-CMD twistd --nodaemon --python callcenter_client.tac
+EXPOSE 5678
+
+# CMD twistd --nodaemon --python callcenter_client.tac
+
