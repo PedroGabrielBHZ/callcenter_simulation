@@ -2,6 +2,7 @@ from twisted.internet import reactor, protocol
 from twisted.internet.stdio import StandardIO
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
+from twisted.application import service
 
 from cmd import Cmd
 
@@ -156,11 +157,3 @@ class ShellService(service.Service):
         #service.Service.startService(self)
         StandardIO(LineProcessor())
 
-top_service = service.MultiService()
-
-shell_service = ShellService()
-shell_service.setServiceParent(top_service)
-
-application = service.Application('TwistedShell')
-
-top_service.setServiceParent(application)

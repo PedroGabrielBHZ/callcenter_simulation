@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 import manager
 
-# Default port in case the env var was not properly sert
+# Default port in case the env var was not properly set
 CC_SERVER_PORT = 5678
 
 proxy_port = int(os.environ.get('CC_SERVER_PORT', CC_SERVER_PORT))
