@@ -53,6 +53,7 @@ class RequestClientFactory(protocol.ClientFactory):
 
 
 class CenterShell(Cmd):
+    prompt = ''
 
     def do_call(self, arg):
         """Make application receive a call whose id is <id>.
@@ -116,13 +117,15 @@ class LineProcessor(LineReceiver):
         """Send out the input to the command interpreter."""
         self.processor.onecmd(data.decode('utf-8'))
 
+host = 'localhost'
+port = 5678
 
 def call(arg):
     """Create a protocol signaling an incoming call with id <arg>.
     This request is to be handled by the queue manager in the server."""
     request = {"command": "call", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
-    reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
+    reactor.connectTCP(host, port, RequestClientFactory(request))
 
 def answer(arg):
     """Create a protocol signaling that operator with id <arg> 
@@ -130,7 +133,7 @@ def answer(arg):
     by the queue manager in the server."""
     request = {"command": "answer", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
-    reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
+    reactor.connectTCP(host, port, RequestClientFactory(request))
 
 
 def reject(arg):
@@ -139,7 +142,7 @@ def reject(arg):
     by the queue manager in the server."""
     request = {"command": "reject", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
-    reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
+    reactor.connectTCP(host, port, RequestClientFactory(request))
 
 
 def hangup(arg):
@@ -148,10 +151,12 @@ def hangup(arg):
     the queue manager in the server."""
     request = {"command": "hangup", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
-    reactor.connectTCP('localhost', 5678, RequestClientFactory(request))
+    reactor.connectTCP(host, port, RequestClientFactory(request))
 
 class ShellService(service.Service):
 
     def startService(self):
         StandardIO(LineProcessor())
 
+        # Uncomment to use old IO method.
+        # reactor.callInThread(CenterShell().cmdloop)

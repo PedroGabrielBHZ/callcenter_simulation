@@ -1,11 +1,11 @@
-FROM ubuntu:latest
+FROM centos:7
 MAINTAINER Pedro Gabriel Amorim Soares <pedrogabriebhz@gmail.com>
 
-RUN apt-get update -y
-RUN apt-get upgrade -y
+RUN yum update -y
+RUN yum upgrade -y
 
-RUN apt-get -y install python3 \
-                       python3-pip
+RUN yum -y install python3 \
+                   python3-pip
 COPY . /app
 WORKDIR /app
 
