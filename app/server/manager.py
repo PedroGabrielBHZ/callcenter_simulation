@@ -33,8 +33,8 @@ class RequestProtocol(protocol.Protocol):
         if verbose:
             print("Received from client:", data)
             print("Parsed received data:")
-            print("Command:", command)
-            print("ID:", identifier)
+            print("> Command:", command)
+            print("> ID:", identifier)
             print()
 
         # Handle the request, sending the appropriate
@@ -278,13 +278,10 @@ class RequestFactory(protocol.Factory):
                     operator['state'] = 'available'
                     operator['call'] = None
                     self.response = f"Call {id} ignored by operator {operator_id}\n"
-                    dequeued_a_call = self.try_dequeueing_call()
-                    if dequeued_a_call:
-                        wait = True
-                    else:
-                        wait = False
+                    self.try_dequeueing_call()
 
-                    # This breaks if there are different client-programs.
+                    # This may break if there are different client-programs.
+                    wait = self.timeout_calls != []
                     for client in self.clients:
                         client.transport.write(bytes(json.dumps(
                             {"response": self.response, "wait": wait}), 'utf-8'))

@@ -11,6 +11,12 @@ import json
 
 class RequestProtocol(protocol.Protocol):
 
+    # If the server send back a wait signal,
+    # this variable is set to a reference
+    # to a callLater object making it possible
+    # for the protocol to cancel the last connection
+    # timeout call and wait again if wait signal
+    # is once again received.
     wait_call = None
 
     def connectionMade(self):
@@ -29,7 +35,8 @@ class RequestProtocol(protocol.Protocol):
         print(json.loads(data)['response'])
 
         if json.loads(data)['wait']:
-            new_wait_call = reactor.callLater(15, self.transport.loseConnection)
+            new_wait_call = reactor.callLater(
+                15, self.transport.loseConnection)
             if self.wait_call != None:
                 self.wait_call.cancel()
                 self.wait_call = new_wait_call
@@ -117,9 +124,11 @@ class LineProcessor(LineReceiver):
         """Send out the input to the command interpreter CenterShell."""
         self.processor.onecmd(data.decode('utf-8'))
 
+
 host = 'localhost'
 #host = '0.0.0.0:5001'
 port = 5678
+
 
 def call(arg):
     """Create a protocol signaling an incoming call with id <arg>.
@@ -127,6 +136,7 @@ def call(arg):
     request = {"command": "call", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
     reactor.connectTCP(host, port, RequestClientFactory(request))
+
 
 def answer(arg):
     """Create a protocol signaling that operator with id <arg> 
@@ -153,6 +163,7 @@ def hangup(arg):
     request = {"command": "hangup", "id": arg}
     request = bytes(json.dumps(request), 'utf-8')
     reactor.connectTCP(host, port, RequestClientFactory(request))
+
 
 class ShellService(service.Service):
 
