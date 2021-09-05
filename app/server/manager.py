@@ -99,8 +99,10 @@ class RequestFactory(protocol.Factory):
     # The call center's operators. Each operator is
     # represented by a dictionary with keys mapping to the
     # operator current state and current assigned call.
-    operators = {'A': {'state': 'available', 'call': None},
-                 'B': {'state': 'available', 'call': None}}
+    operators = {
+        'A': {'state': 'available', 'call': None},
+        'B': {'state': 'available', 'call': None}
+    }
 
     def call(self, id):
         """Process an incoming call from the client.
@@ -113,7 +115,6 @@ class RequestFactory(protocol.Factory):
         """
         if self.id_already_taken(id):
             self.response += f'Call {id} is already being processed.\n'
-            return
         else:
             # If id is not taken, make the call using the auxiliary function.
             self.aux_call(id)
@@ -128,23 +129,20 @@ class RequestFactory(protocol.Factory):
         # Try to find operator <id>. If there is no operator <id>, except.
         try:
             operator = self.operators[id]
-            if operator['state'] == 'busy':
-                self.response += f"Operator {id} is already in a call.\n"
-                return
-            else:
-                call = operator['call']
-                if call == None:
-                    self.response += f"There are no calls for operator {id}.\n"
-                    return
-                else:
-                    # Set the operator as busy, update response and remove timeout.
-                    operator['state'] = 'busy'
-                    self.response += f"Call {call} answered by operator {id}.\n"
-                    self.remove_timeout(call)
-                    return
         except:
             self.response += f'There is no operator whose id is equal to {id}.\n'
             return
+        if operator['state'] == 'busy':
+            self.response += f"Operator {id} is already in a call.\n"
+        else:
+            call = operator['call']
+            if call == None:
+                self.response += f"There are no calls for operator {id}.\n"
+            else:
+                # Set the operator as busy, update response and remove timeout.
+                operator['state'] = 'busy'
+                self.response += f"Call {call} answered by operator {id}.\n"
+                self.remove_timeout(call)
 
     def reject(self, id):
         """Make operator <id> reject a call being delivered to it.
@@ -158,21 +156,19 @@ class RequestFactory(protocol.Factory):
         # Try to find operator <id>. If there is no operator <id>, except.
         try:
             operator = self.operators[id]
-            call = operator['call']
-            if call == None:
-                self.response += f"There are no calls for operator {id} to reject.\n"
-                return
-            else:
-                # Free the operator, update response and remove timeout.
-                operator['state'] = 'available'
-                self.response += f"Call {call} rejected by operator {id}\n"
-                self.remove_timeout(call)
-                # Call got rejected, but it must be sent again for processing.
-                self.aux_call(call, novel=False)
-                return
         except:
             self.response += f'There is no operator whose id is equal to {id}.\n'
             return
+        call = operator['call']
+        if call == None:
+            self.response += f"There are no calls for operator {id} to reject.\n"
+        else:
+            # Free the operator, update response and remove timeout.
+            operator['state'] = 'available'
+            self.response += f"Call {call} rejected by operator {id}\n"
+            self.remove_timeout(call)
+            # Call got rejected, but it must be sent again for processing.
+            self.aux_call(call, novel=False)
 
     def hangup(self, id):
         """Make call whose id is <id> be finished. If the call being hung up
@@ -184,7 +180,6 @@ class RequestFactory(protocol.Factory):
         if id in self.calls_on_wait:
             self.calls_on_wait.remove(id)
             self.response += f"Call {id} missed\n"
-            return
         # else, look for operator responsible for that call
         else:
             operator, operator_id = self.get_operator_by_call(id)
@@ -244,7 +239,7 @@ class RequestFactory(protocol.Factory):
         that is ringing for an operator. Update
         manager's list of counting timeouts.
         """
-        timeout_call = reactor.callLater(10, self.on_timeout, id)
+        timeout_call = reactor.callLater(60, self.on_timeout, id)
         self.timeout_calls.append({'id': id, 'call': timeout_call})
 
     def remove_timeout(self, id):

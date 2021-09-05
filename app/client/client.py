@@ -36,7 +36,7 @@ class RequestProtocol(protocol.Protocol):
 
         if json.loads(data)['wait']:
             new_wait_call = reactor.callLater(
-                15, self.transport.loseConnection)
+                120, self.transport.loseConnection)
             if self.wait_call != None:
                 self.wait_call.cancel()
                 self.wait_call = new_wait_call
