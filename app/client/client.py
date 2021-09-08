@@ -1,12 +1,10 @@
-from twisted.internet import reactor, protocol
-from twisted.internet.stdio import StandardIO
-from twisted.internet.protocol import Factory
-from twisted.protocols.basic import LineReceiver
-from twisted.application import service
-
+import json
 from cmd import Cmd
 
-import json
+from twisted.application import service
+from twisted.internet import protocol, reactor
+from twisted.internet.stdio import StandardIO
+from twisted.protocols.basic import LineReceiver
 
 
 class RequestProtocol(protocol.Protocol):
